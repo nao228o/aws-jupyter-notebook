@@ -45,7 +45,7 @@ sudo mkdir workspace
 sudo chown ssm-user:ssm-user workspace
 cd workspace
 
-# Jupyterを正起動
+# Jupyterを起動
 jupyter notebook --ip=0.0.0.0 --no-browser --port=8888
 ```
 
