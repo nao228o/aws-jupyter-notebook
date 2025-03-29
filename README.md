@@ -33,22 +33,16 @@ v1/
 
 1. スクリプトに実行権限を付与：
 ```bash
-chmod +x tf.sh
+chmod +x ./v1/dev/tf.sh
 ```
 
 2. スクリプトを実行：
 ```bash
-# 初期化
-./tf.sh init
-
-# 実行計画の確認
-./tf.sh plan
-
 # インフラの作成
-./tf.sh apply
+./v1/dev/tf.sh apply
 
 # インフラの削除
-./tf.sh destroy
+./v1/dev/tf.sh destroy
 ```
 
 ### 手動で実行する場合
