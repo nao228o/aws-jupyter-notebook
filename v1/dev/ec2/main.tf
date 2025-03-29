@@ -1,25 +1,3 @@
-resource "aws_vpc" "staging_vpc" {
-  cidr_block = var.vpc_cidr
-
-  enable_dns_support   = true
-  enable_dns_hostnames = true
-
-  tags = {
-    Name = "staging-vpc"
-  }
-}
-
-resource "aws_subnet" "staging_subnet" {
-  vpc_id                  = aws_vpc.staging_vpc.id
-  cidr_block              = var.subnet_cidr
-  availability_zone       = "ap-northeast-1a"
-  map_public_ip_on_launch = false
-
-  tags = {
-    Name = "staging-subnet"
-  }
-}
-
 resource "aws_vpc_dhcp_options" "dns_resolver" {
   domain_name_servers = ["AmazonProvidedDNS"]
   ntp_servers        = ["169.254.169.123"]
@@ -27,13 +5,13 @@ resource "aws_vpc_dhcp_options" "dns_resolver" {
   netbios_node_type = 2
 
   tags = {
-    Name = "staging-dhcp-options"
+    Name = "${var.env}-dhcp-options"
   }
 }
 
 # VPCのDNS設定を有効化
 resource "aws_vpc_dhcp_options_association" "dns_resolver" {
-  vpc_id          = aws_vpc.staging_vpc.id
+  vpc_id          = data.terraform_remote_state.vpc.outputs.vpc_id
   dhcp_options_id = aws_vpc_dhcp_options.dns_resolver.id
 }
 
@@ -69,16 +47,16 @@ resource "aws_iam_instance_profile" "ssm_profile" {
 
 # インターネットゲートウェイの作成
 resource "aws_internet_gateway" "igw" {
-  vpc_id = aws_vpc.staging_vpc.id
+  vpc_id = data.terraform_remote_state.vpc.outputs.vpc_id
 
   tags = {
-    Name = "staging-igw"
+    Name = "${var.env}-igw"
   }
 }
 
 # ルートテーブルの作成
 resource "aws_route_table" "public" {
-  vpc_id = aws_vpc.staging_vpc.id
+  vpc_id = data.terraform_remote_state.vpc.outputs.vpc_id
 
   route {
     cidr_block = "0.0.0.0/0"
@@ -86,13 +64,13 @@ resource "aws_route_table" "public" {
   }
 
   tags = {
-    Name = "staging-public-rt"
+    Name = "${var.env}-public-rt"
   }
 }
 
 # サブネットとルートテーブルの関連付け
 resource "aws_route_table_association" "public" {
-  subnet_id      = aws_subnet.staging_subnet.id
+  subnet_id      = data.terraform_remote_state.subnet.outputs.subnet_id
   route_table_id = aws_route_table.public.id
 }
 
@@ -101,13 +79,13 @@ resource "aws_instance" "notebook" {
   ami           = var.ami
   instance_type = var.instance_type
   key_name      = var.key_name
-  subnet_id                   = aws_subnet.staging_subnet.id
+  subnet_id                   = data.terraform_remote_state.subnet.outputs.subnet_id
   vpc_security_group_ids      = [aws_security_group.notebook.id]
   associate_public_ip_address = true
   iam_instance_profile        = aws_iam_instance_profile.ssm_profile.name
 
   tags = {
-    Name = "staging-notebook-ec2"
+    Name = "${var.env}-notebook-ec2"
   }
 }
 
@@ -115,7 +93,7 @@ resource "aws_instance" "notebook" {
 resource "aws_security_group" "notebook" {
   name        = "notebook-security-group"
   description = "Security group for notebook EC2 instance"
-  vpc_id      = aws_vpc.staging_vpc.id
+  vpc_id      = data.terraform_remote_state.vpc.outputs.vpc_id
 
   ingress {
     from_port   = 22
@@ -146,10 +124,10 @@ resource "aws_security_group" "notebook" {
 
 # VPCエンドポイントの作成
 resource "aws_vpc_endpoint" "ssm" {
-  vpc_id              = aws_vpc.staging_vpc.id
+  vpc_id              = data.terraform_remote_state.vpc.outputs.vpc_id
   service_name        = "com.amazonaws.ap-northeast-1.ssm"
   vpc_endpoint_type   = "Interface"
-  subnet_ids          = [aws_subnet.staging_subnet.id]
+  subnet_ids          = [data.terraform_remote_state.subnet.outputs.subnet_id]
   security_group_ids  = [aws_security_group.vpce.id]
   private_dns_enabled = true
   tags = {
@@ -158,10 +136,10 @@ resource "aws_vpc_endpoint" "ssm" {
 }
 
 resource "aws_vpc_endpoint" "ssmmessages" {
-  vpc_id              = aws_vpc.staging_vpc.id
+  vpc_id              = data.terraform_remote_state.vpc.outputs.vpc_id
   service_name        = "com.amazonaws.ap-northeast-1.ssmmessages"
   vpc_endpoint_type   = "Interface"
-  subnet_ids          = [aws_subnet.staging_subnet.id]
+  subnet_ids          = [data.terraform_remote_state.subnet.outputs.subnet_id]
   security_group_ids  = [aws_security_group.vpce.id]
   private_dns_enabled = true
   tags = {
@@ -170,10 +148,10 @@ resource "aws_vpc_endpoint" "ssmmessages" {
 }
 
 resource "aws_vpc_endpoint" "ec2messages" {
-  vpc_id              = aws_vpc.staging_vpc.id
+  vpc_id              = data.terraform_remote_state.vpc.outputs.vpc_id
   service_name        = "com.amazonaws.ap-northeast-1.ec2messages"
   vpc_endpoint_type   = "Interface"
-  subnet_ids          = [aws_subnet.staging_subnet.id]
+  subnet_ids          = [data.terraform_remote_state.subnet.outputs.subnet_id]
   security_group_ids  = [aws_security_group.vpce.id]
   private_dns_enabled = true
   tags = {
@@ -185,7 +163,7 @@ resource "aws_vpc_endpoint" "ec2messages" {
 resource "aws_security_group" "vpce" {
   name        = "vpce-security-group"
   description = "Security group for VPC Endpoints"
-  vpc_id      = aws_vpc.staging_vpc.id
+  vpc_id      = data.terraform_remote_state.vpc.outputs.vpc_id
 
   ingress {
     from_port       = 443

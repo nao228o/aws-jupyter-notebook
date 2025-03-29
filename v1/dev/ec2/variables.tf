@@ -32,3 +32,9 @@ variable "key_name" {
   type    = string
   default = "staging-key"
 }
+
+variable "env" {
+  description = "環境名"
+  type        = string
+  default     = "staging"
+}
