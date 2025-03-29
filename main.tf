@@ -67,6 +67,35 @@ resource "aws_iam_instance_profile" "ssm_profile" {
   role = aws_iam_role.ssm_role.name
 }
 
+# インターネットゲートウェイの作成
+resource "aws_internet_gateway" "igw" {
+  vpc_id = aws_vpc.staging_vpc.id
+
+  tags = {
+    Name = "staging-igw"
+  }
+}
+
+# ルートテーブルの作成
+resource "aws_route_table" "public" {
+  vpc_id = aws_vpc.staging_vpc.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.igw.id
+  }
+
+  tags = {
+    Name = "staging-public-rt"
+  }
+}
+
+# サブネットとルートテーブルの関連付け
+resource "aws_route_table_association" "public" {
+  subnet_id      = aws_subnet.staging_subnet.id
+  route_table_id = aws_route_table.public.id
+}
+
 # EC2インスタンスの作成
 resource "aws_instance" "notebook" {
   ami           = var.ami
