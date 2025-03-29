@@ -5,7 +5,7 @@ AWSにJupyter Notebook環境を構築するためのTerraformコード
 このリポジトリには、AWSにJupyter Notebook環境を構築するためのTerraformの設定ファイルが含まれています。
 
 ## 構成
-- EC2インスタンス (Amazon Linux 2)
+- EC2インスタンス (Amazon Linux 2023)
 - VPC、サブネット
 - セキュリティグループ
 - Systems Manager用のVPCエンドポイント
